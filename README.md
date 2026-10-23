@@ -40,6 +40,16 @@ You can check this from the numbers: 39.6k used + 927.4k free + 33k autocompact 
 
 So if you remember the older complaints about MCP tool definitions eating context before you even start, check your own `/context` before blaming MCP. In my case, deferral took care of it.
 
+## Context occupancy is not the same as billed cost
+
+The 39.6k figure is how much of the context window is occupied, not what each turn costs. That prefix is resent with every request, but Claude Code uses Anthropic's prompt caching, so after the first request in a session, an unchanged prefix is normally read from cache instead of being processed as fresh input.
+
+Per Anthropic's [prompt caching docs](https://docs.claude.com/en/docs/build-with-claude/prompt-caching), cache reads are billed at 0.1× the base input price on most models (0.05× on Claude Opus 5.5 and Sonnet 5.5). Writing the cache costs more than normal input: 1.25× for the default 5-minute lifetime, 2× for the 1-hour option. The cache expires after 5 minutes without use by default, and any change to the prefix (editing CLAUDE.md, adding a skill, changing tools) invalidates it.
+
+So in a busy session the fixed overhead is far cheaper than the raw token count suggests. It still matters, though: it fills the context window, and it is paid at the higher write rate every time the cache is cold or invalidated. Cheaper is not free.
+
+A before/after comparison from my own cleanup is coming. I'll add it here once I've re-run `/context all`.
+
 ## What each bucket actually is
 
 **System prompt (1.9k) and system tools (4k).** Claude Code's own instructions and the tool definitions it needs on every turn. You don't control these; they're the baseline.
